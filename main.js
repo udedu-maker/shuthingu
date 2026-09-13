@@ -1,4 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
+import { EffectComposer } from "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x02050d, 0.035);
@@ -12,6 +15,9 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 document.body.appendChild(renderer.domElement);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.8, 0.7, 0.65));
 
 scene.add(new THREE.HemisphereLight(0x9dbdff, 0x1a0d09, 1.8));
 const sun = new THREE.DirectionalLight(0xffd6ad, 3.5);
@@ -30,6 +36,13 @@ const wing = new THREE.Mesh(
   new THREE.MeshStandardMaterial({ color: 0x9ceeff, emissive: 0x1da8d1, emissiveIntensity: 1.5 })
 );
 player.add(wing);
+const cockpit = new THREE.Mesh(
+  new THREE.SphereGeometry(0.25, 24, 12),
+  new THREE.MeshPhysicalMaterial({ color: 0x152a4d, metalness: 0.7, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.08 })
+);
+cockpit.scale.set(0.8, 0.6, 1.5);
+cockpit.position.set(0, 0.18, -0.1);
+player.add(cockpit);
 const engineGlow = new THREE.Mesh(
   new THREE.SphereGeometry(0.22, 16, 16),
   new THREE.MeshBasicMaterial({ color: 0xff9d38 })
@@ -46,6 +59,11 @@ const stars = new THREE.Points(
   new THREE.PointsMaterial({ color: 0x73b9ff, size: 0.055 })
 );
 scene.add(stars);
+const nebula = new THREE.Mesh(
+  new THREE.SphereGeometry(80, 32, 16),
+  new THREE.MeshBasicMaterial({ color: 0x071a35, side: THREE.BackSide, transparent: true, opacity: 0.34 })
+);
+scene.add(nebula);
 
 const keys = new Set();
 const shots = [];
@@ -214,10 +232,15 @@ function update(dt) {
     const enemy = enemies[i];
     enemy.position.z += enemy.userData.speed * dt;
     enemy.rotation.x += dt * enemy.userData.spin; enemy.rotation.y += dt * 1.2;
-    if (enemy.position.distanceTo(player.position) < 1) {
+    const horizontalDistance = Math.hypot(
+      enemy.position.x - player.position.x,
+      enemy.position.y - player.position.y
+    );
+    const depthDistance = Math.abs(enemy.position.z - player.position.z);
+    if (horizontalDistance < 0.78 && depthDistance < 0.78) {
       scene.remove(enemy); enemies.splice(i, 1); shield = 0;
     } else if (enemy.position.z > 10) {
-      scene.remove(enemy); enemies.splice(i, 1); shield -= 10;
+      scene.remove(enemy); enemies.splice(i, 1); score += 25;
     }
     for (let i = powerups.length - 1; i >= 0; i--) {
       const item = powerups[i];
@@ -242,11 +265,12 @@ function update(dt) {
 function animate() {
   requestAnimationFrame(animate);
   update(clock.getDelta());
-  renderer.render(scene, camera);
+  composer.render();
 }
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
 });
 animate();
