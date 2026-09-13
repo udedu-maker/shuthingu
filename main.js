@@ -50,14 +50,19 @@ scene.add(stars);
 const keys = new Set();
 const shots = [];
 const enemies = [];
+const powerups = [];
 let score = 0;
 let shield = 100;
 let spawnTimer = 0;
+let powerupTimer = 8;
 let lastShot = 0;
+let weapon = "NORMAL";
+let weaponTimer = 0;
 let gameOver = false;
 const clock = new THREE.Clock();
 const scoreEl = document.querySelector("#score");
 const shieldEl = document.querySelector("#shield");
+const weaponEl = document.querySelector("#weapon");
 const message = document.querySelector("#message");
 
 addEventListener("keydown", (event) => {
@@ -75,15 +80,20 @@ document.querySelector("#restart").addEventListener("click", () => location.relo
 function fire() {
   if (gameOver || performance.now() - lastShot < 180) return;
   lastShot = performance.now();
-  const laser = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.045, 0.045, 0.8, 8),
-    new THREE.MeshBasicMaterial({ color: 0x8cffff })
-  );
-  laser.rotation.x = Math.PI / 2;
-  laser.position.copy(player.position);
-  laser.position.z -= 0.9;
-  scene.add(laser);
-  shots.push(laser);
+  const offsets = weapon === "WIDE" ? [-0.42, 0, 0.42] : [0];
+  offsets.forEach((offset) => {
+    const laser = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, weapon === "WIDE" ? 0.07 : 0.045, 0.8, 8),
+      new THREE.MeshBasicMaterial({ color: weapon === "WIDE" ? 0xffd36b : 0x8cffff })
+    );
+    laser.rotation.x = Math.PI / 2;
+    laser.position.copy(player.position);
+    laser.position.x += offset;
+    laser.position.z -= 0.9;
+    laser.userData.homing = weapon === "HOMING";
+    scene.add(laser);
+    shots.push(laser);
+  });
 }
 
 function spawnEnemy() {
@@ -111,8 +121,46 @@ function spawnEnemy() {
   enemy.position.set((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 5, -28);
   enemy.userData.speed = 3 + Math.random() * 2;
   enemy.userData.spin = (Math.random() - 0.5) * 2;
+  const trail = new THREE.Mesh(
+    new THREE.ConeGeometry(0.18, 0.9, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff7a32, transparent: true, opacity: 0.8 })
+  );
+  trail.rotation.x = -Math.PI / 2;
+  trail.position.z = -0.7;
+  enemy.add(trail);
   scene.add(enemy);
   enemies.push(enemy);
+}
+
+function spawnPowerup() {
+  const type = ["SHIELD", "HOMING", "WIDE"][Math.floor(Math.random() * 3)];
+  const colors = { SHIELD: 0x54eaff, HOMING: 0xff70d8, WIDE: 0xffc857 };
+  const item = new THREE.Group();
+  const core = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.38, 1),
+    new THREE.MeshStandardMaterial({ color: colors[type], emissive: colors[type], emissiveIntensity: 2.5, metalness: 0.65, roughness: 0.2 })
+  );
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.58, 0.035, 8, 24),
+    new THREE.MeshBasicMaterial({ color: colors[type], transparent: true, opacity: 0.8 })
+  );
+  item.add(core, ring);
+  item.userData.type = type;
+  item.userData.speed = 2.5;
+  item.position.set((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 4.5, -28);
+  scene.add(item);
+  powerups.push(item);
+}
+
+function activatePowerup(type) {
+  if (type === "SHIELD") {
+    shield = Math.min(100, shield + 35);
+    shieldEl.textContent = shield;
+    return;
+  }
+  weapon = type;
+  weaponTimer = 10;
+  weaponEl.textContent = type === "HOMING" ? "追尾弾" : "WIDE LASER";
 }
 
 function endGame() {
@@ -132,11 +180,27 @@ function update(dt) {
 
   spawnTimer -= dt;
   if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(0.35, 1.1 - score / 1000); }
+  powerupTimer -= dt;
+  if (powerupTimer <= 0) { spawnPowerup(); powerupTimer = 12 + Math.random() * 8; }
+  if (weaponTimer > 0) {
+    weaponTimer -= dt;
+    if (weaponTimer <= 0) { weapon = "NORMAL"; weaponEl.textContent = "NORMAL"; }
+  }
   stars.position.z += dt * 1.5;
   if (stars.position.z > 10) stars.position.z = 0;
 
   for (let i = shots.length - 1; i >= 0; i--) {
     const shot = shots[i];
+    if (shot.userData.homing && enemies.length) {
+      let target = enemies[0];
+      let distance = shot.position.distanceTo(target.position);
+      for (const enemy of enemies) {
+        const candidateDistance = shot.position.distanceTo(enemy.position);
+        if (candidateDistance < distance) { target = enemy; distance = candidateDistance; }
+      }
+      shot.position.x += THREE.MathUtils.clamp((target.position.x - shot.position.x) * dt * 4, -dt * 8, dt * 8);
+      shot.position.y += THREE.MathUtils.clamp((target.position.y - shot.position.y) * dt * 4, -dt * 8, dt * 8);
+    }
     shot.position.z -= dt * 24;
     let hit = false;
     for (let j = enemies.length - 1; j >= 0; j--) {
@@ -151,9 +215,23 @@ function update(dt) {
     enemy.position.z += enemy.userData.speed * dt;
     enemy.rotation.x += dt * enemy.userData.spin; enemy.rotation.y += dt * 1.2;
     if (enemy.position.distanceTo(player.position) < 1) {
-      scene.remove(enemy); enemies.splice(i, 1); shield -= 20;
+      scene.remove(enemy); enemies.splice(i, 1); shield = 0;
     } else if (enemy.position.z > 10) {
       scene.remove(enemy); enemies.splice(i, 1); shield -= 10;
+    }
+    for (let i = powerups.length - 1; i >= 0; i--) {
+      const item = powerups[i];
+      item.position.z += item.userData.speed * dt;
+      item.rotation.y += dt * 2.5;
+      item.rotation.z += dt;
+      if (item.position.distanceTo(player.position) < 1.1) {
+        activatePowerup(item.userData.type);
+        scene.remove(item);
+        powerups.splice(i, 1);
+      } else if (item.position.z > 10) {
+        scene.remove(item);
+        powerups.splice(i, 1);
+      }
     }
   }
   scoreEl.textContent = String(score).padStart(6, "0");

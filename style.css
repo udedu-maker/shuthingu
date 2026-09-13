@@ -27,8 +27,9 @@ canvas { display: block; }
 }
 
 .brand { color: #27d9ff; font-size: clamp(16px, 2vw, 24px); letter-spacing: 0.18em; }
-.stats { display: flex; gap: 28px; margin-top: 14px; color: #8da9c9; font-size: 12px; letter-spacing: 0.12em; }
+.stats { display: flex; gap: 28px; margin-top: 14px; color: #8da9c9; font-size: 12px; letter-spacing: 0.12em; flex-wrap: wrap; }
 .stats b { color: #fff; font-size: 18px; margin-left: 6px; }
+#weapon { color: #ffcf70; }
 #help { position: absolute; bottom: 22px; left: 30px; color: #59799a; font-size: 11px; letter-spacing: 0.08em; }
 
 #message {
