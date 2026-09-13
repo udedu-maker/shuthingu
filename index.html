@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEON INTERCEPT</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="hud">
+      <div class="brand">NEON INTERCEPT</div>
+      <div class="stats">
+        <span>SCORE <b id="score">000000</b></span>
+        <span>SHIELD <b id="shield">100</b>%</span>
+      </div>
+      <div id="help">WASD / 矢印キーで移動　｜　クリックまたは SPACE で射撃</div>
+    </div>
+    <div id="message" class="hidden">
+      <h1 id="message-title">GAME OVER</h1>
+      <p id="message-detail"></p>
+      <button id="restart">再出撃</button>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

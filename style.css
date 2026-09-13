@@ -1,0 +1,58 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap");
+
+:root {
+  color-scheme: dark;
+  font-family: "Orbitron", sans-serif;
+  background: #02050d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #101e38, #02050d 70%);
+}
+
+canvas { display: block; }
+
+#hud {
+  position: fixed;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  padding: 24px 30px;
+  text-shadow: 0 0 12px #27d9ff;
+}
+
+.brand { color: #27d9ff; font-size: clamp(16px, 2vw, 24px); letter-spacing: 0.18em; }
+.stats { display: flex; gap: 28px; margin-top: 14px; color: #8da9c9; font-size: 12px; letter-spacing: 0.12em; }
+.stats b { color: #fff; font-size: 18px; margin-left: 6px; }
+#help { position: absolute; bottom: 22px; left: 30px; color: #59799a; font-size: 11px; letter-spacing: 0.08em; }
+
+#message {
+  position: fixed;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  background: #02050dcc;
+  text-align: center;
+}
+#message.hidden { display: none; }
+#message h1 { margin: 0; color: #ff3f8e; font-size: clamp(32px, 7vw, 70px); letter-spacing: 0.12em; text-shadow: 0 0 24px #ff3f8e; }
+#message p { color: #b5cde3; }
+button {
+  cursor: pointer;
+  border: 1px solid #27d9ff;
+  padding: 12px 28px;
+  color: #02111d;
+  background: #27d9ff;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  box-shadow: 0 0 22px #27d9ff88;
+}
+button:hover { background: #fff; }
